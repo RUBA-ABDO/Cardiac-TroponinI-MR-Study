@@ -708,10 +708,8 @@ for (i in seq_along(cade38)) {
     names(cade38)[i] <- "CHR:POS"
   }
 }
-# التأكد أن الأعمدة موجودة
 if (all(c("CHR:POS", "effect_allele.exposure", "other_allele.exposure") %in% names(cade38))) {
   
-  # إنشاء العمود SNP بتجميع القيم من الأعمدة المطلوبة
   cade38$SNP <- paste(
     cade38$`CHR:POS`,
     cade38$effect_allele.exposure,
@@ -763,7 +761,6 @@ cade38$F_statistic <- with(cade38, (rsq.exposure * (samplesize.exposure - 2)) / 
 CAD_exp_datavf$units.exposure <- "SD (inverse rank-normalized)"
 
 #load outcome data
-# قراءة الملف النصي مع تحديد الترميز UTF-8 أو المناسب للعربية إذا ظهرت مشاكل
 troponin_data <- read.table("C:/Users/hp/Desktop/اخر ملفات للرسالة/troponin_gwas_summary_statistics.txt", 
                             header = TRUE, sep = "\t", stringsAsFactors = FALSE, fileEncoding = "UTF-8")
 names(troponin_data)
@@ -988,7 +985,7 @@ print(steiger_results$sensitivity_plot)
 summary(dat$rsq.exposure)
 summary(dat$rsq.outcome)
 table(dat$rsq.exposure > dat$rsq.outcome)
-install.packages("remotes")  # لو ما عندك
+install.packages("remotes")  
 remotes::install_github("MRCIEU/TwoSampleMR")
 
 # steiger filtering
