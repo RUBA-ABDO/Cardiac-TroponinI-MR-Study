@@ -777,3 +777,35 @@ mr_report(
   author = "RUBA ABDO",
   study = "Cardiac Troponin I ON DCM MR study"
 )
+# Read the PheWAS data from a CSV file
+phewas_data <- fread("C:/Users/hp/Desktop/phewas_data.csv")
+
+# Adding the -log10(P-value) column
+phewas_data <- phewas_data %>% mutate(logp = -log10(`P-value`))
+
+# Arrange the data by increasing logp and convert Phenotype to a factor with levels ordered accordingly
+phewas_data <- phewas_data %>%
+  arrange(logp) %>%
+  mutate(Phenotype = factor(Phenotype, levels = unique(Phenotype)))
+
+# Create a horizontal Manhattan-style bar plot:
+# - x axis: Phenotype names (after coordinate flip, will be vertical axis)
+# - y axis: -log10(p-value)
+# - Bars colored by SNP for easy distinction
+# Add a red dashed horizontal line to mark the significance threshold (p = 2.8e-5)
+p <- ggplot(phewas_data, aes(x = Phenotype, y = logp, fill = SNP)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  coord_flip() +
+  geom_hline(yintercept = -log10(2.8e-5), color = "red", linetype = "dashed") +
+  labs(title = "PheWAS Plot for 5 SNPs",
+       x = "Phenotype",
+       y = "-log10(P-value)",
+       fill = "SNP") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+
+# Display the plot in the R graphics window
+print(p)
+
+# Save the plot as a PNG file with specified dimensions
+ggsave("phewas_plot_5snps_combined.png", plot = p, width = 10, height = 8)
