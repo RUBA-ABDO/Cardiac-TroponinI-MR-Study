@@ -3,15 +3,12 @@
 
 # INSTALL REQUIRED PACKAGES 
 
-install.packages('stringi')          # For string manipulation (e.g., text parsing/formatting)
+install.packages("stringi")          # For string manipulation (e.g., text parsing/formatting)
 install.packages("devtools")         # To install packages from GitHub (e.g., TwoSampleMR)
 install.packages("plyr")             # For data manipulation (older but still used in some functions)
 install.packages("ggplot2")          # For data visualization and MR plot outputs
 install.packages("LDlinkR")          # For finding proxy SNPs based on linkage disequilibrium
 install.packages("tidyr")            # For reshaping and tidying data
-install.packages('mr.raps', repos = c('https://mrcieu.r-universe.dev', 'https://cloud.r-project.org')) 
-# For robust adjusted profile score (RAPS) method in MR analysis
-
 install.packages("tinytex")          # Required to create PDF output using RMarkdown
 tinytex::install_tinytex()           # Installs TinyTeX LaTeX engine for rendering PDFs
 install.packages("rmarkdown")        # For writing reports in RMarkdown format
@@ -31,7 +28,6 @@ library(stringr)                    # Modern string manipulation (more robust th
 library(dplyr)                      # For modern data manipulation (filter, select, mutate, etc.)
 library(devtools)                   # Needed for installing packages from GitHub
 library(LDlinkR)                    # Interface with LDlink API for LD proxy search
-library(RadialMR)                   # Radial MR plots and outlier detection
 library(tidyr)                      # For reshaping MR results into tidy formats
 library(stringr)                    # (Redundant but safe) for string operations
 library(ggrepel)                    # Improves ggplot label readability (e.g., in MR scatter plots)
@@ -277,31 +273,6 @@ exp(results$b[1])
 exp(results$b[1] - 1.96 * results$se[1])
 exp(results$b[1] + 1.96 * results$se[1])
 
-# Sensitivity analysis
-res_single <- mr_singlesnp(datIC, all_method = c("mr_ivw", "mr_egger_regression", "mr_weighted_median"))
-print(res_single)
-
-# Heterogeneity test (Cochran’s Q)
-het <- mr_heterogeneity(datIC, method_list = "mr_ivw")
-print(het)
-
-# MR-Egger intercept test
-egg.int <- mr_pleiotropy_test(datIC)
-print(egg.int)
-
-# Rucker framework comparison
-result_rucker <- mr_rucker(datIC)
-print(result_rucker)
-
-# Radial MR
-radial_dat <- dat_to_RadialMR(datIC)
-result_ivw <- ivw_radial(radial_dat[[1]], alpha = 0.05, weights = 3)
-print(result_ivw)
-
-# MR-PRESSO (Outlier detection & correction)
-mr_presso_results <- run_mr_presso(datIC, NbDistribution = 1000, SignifThreshold = 0.05)
-print(mr_presso_results)
-
 # Penalized Weighted Median
 result_pwm <- mr_penalised_weighted_median(
   b_exp = datIC$beta.exposure,
@@ -312,23 +283,50 @@ result_pwm <- mr_penalised_weighted_median(
 )
 print(result_pwm)
 
-#Maximum Likelihood Method
-result_ml <- mr_two_sample_ml(
-  b_exp = datIC$beta.exposure,
-  b_out = datIC$beta.outcome,
-  se_exp = datIC$se.exposure,
-  se_out = datIC$se.outcome
-)
-print(result_ml)
+# MR-Egger intercept test
+egg.int <- mr_pleiotropy_test(datIC)
+print(egg.int)
 
-# MR-RAPS (Robust Adjusted Profile Score)
-result_raps <- mr_raps(
-  b_exp = datIC$beta.exposure,
-  b_out = datIC$beta.outcome,
-  se_exp = datIC$se.exposure,
-  se_out = datIC$se.outcome
-)
-print(result_raps)
+# Read the PheWAS data from a CSV file
+phewas_data <- fread("C:/Users/hp/Desktop/phewas_data.csv")
+
+# Adding the -log10(P-value) column
+phewas_data <- phewas_data %>% mutate(logp = -log10(`P-value`))
+
+# Arrange the data by increasing logp and convert Phenotype to a factor with levels ordered accordingly
+phewas_data <- phewas_data %>%
+  arrange(logp) %>%
+  mutate(Phenotype = factor(Phenotype, levels = unique(Phenotype)))
+
+# Create a horizontal Manhattan-style bar plot:
+# - x axis: Phenotype names (after coordinate flip, will be vertical axis)
+# - y axis: -log10(p-value)
+# - Bars colored by SNP for easy distinction
+# Add a red dashed horizontal line to mark the significance threshold (p = 2.8e-5)
+p <- ggplot(phewas_data, aes(x = Phenotype, y = logp, fill = SNP)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  coord_flip() +
+  geom_hline(yintercept = -log10(2.8e-5), color = "red", linetype = "dashed") +
+  labs(title = "PheWAS Plot for 5 SNPs",
+       x = "Phenotype",
+       y = "-log10(P-value)",
+       fill = "SNP") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+
+# Display the plot in the R graphics window
+print(p)
+
+# Save the plot as a PNG file with specified dimensions
+ggsave("phewas_plot_5snps_combined.png", plot = p, width = 10, height = 8)
+
+# Heterogeneity test (Cochran’s Q)
+het <- mr_heterogeneity(datIC, method_list = "mr_ivw")
+print(het)
+
+# Sensitivity analysis
+res_single <- mr_singlesnp(datIC, all_method = c("mr_ivw", "mr_egger_regression", "mr_weighted_median"))
+print(res_single)
 
 # Rsq for Outcome + Steiger Directionality
 CAD_out_data$samplesize.outcome <- 184305
@@ -395,7 +393,6 @@ p <- p + geom_text(
 )
 print(p)
 dev.off()
-
 
 # Funnel plot
 p2 <- mr_funnel_plot(res_single)
@@ -621,31 +618,6 @@ results$OR <- exp(results$b)
 results$CI_lower <- exp(results$b - 1.96 * results$se)
 results$CI_upper <- exp(results$b + 1.96 * results$se)
 
-# Single SNP effect analysis
-res_single <- mr_singlesnp(datID, all_method = c("mr_ivw", "mr_egger_regression", "mr_weighted_median"))
-print(res_single)
-
-# Heterogeneity (Cochran’s Q test)
-het <- mr_heterogeneity(datID, method_list = "mr_ivw")
-print(het)
-
-# Pleiotropy (Egger intercept test)
-egg.int <- mr_pleiotropy_test(datID)
-print(egg.int)
-
-# MR-Rucker framework 
-result_rucker <- mr_rucker(datID)
-print(result_rucker)
-
-# Radial MR (visualize outliers)
-radial_dat <- dat_to_RadialMR(datID)
-result_ivw <- ivw_radial(radial_dat[[1]], alpha = 0.05, weights = 3)
-print(result_ivw)
-
-# MR-PRESSO to detect and correct for horizontal pleiotropy
-mr_presso_results <- run_mr_presso(datID, NbDistribution = 1000, SignifThreshold = 0.05)
-print(mr_presso_results)
-
 # Penalised Weighted Median method
 result_pwm <- mr_penalised_weighted_median(
   b_exp = datID$beta.exposure,
@@ -656,24 +628,17 @@ result_pwm <- mr_penalised_weighted_median(
 )
 print(result_pwm)
 
-# Maximum Likelihood estimation
-result_ml <- mr_two_sample_ml(
-  b_exp = datID$beta.exposure,
-  b_out = datID$beta.outcome,
-  se_exp = datID$se.exposure,
-  se_out = datID$se.outcome,
-  parameters = list()
-)
-print(result_ml)
+# Pleiotropy (Egger intercept test)
+egg.int <- mr_pleiotropy_test(datID)
+print(egg.int)
 
-# Robust Adjusted Profile Score (MR-RAPS)
-result_raps <- mr_raps(
-  b_exp = datID$beta.exposure,
-  b_out = datID$beta.outcome,
-  se_exp = datID$se.exposure,
-  se_out = datID$se.outcome
-)
-print(result_raps)
+# Heterogeneity (Cochran’s Q test)
+het <- mr_heterogeneity(datID, method_list = "mr_ivw")
+print(het)
+
+# Single SNP effect analysis
+res_single <- mr_singlesnp(datID, all_method = c("mr_ivw", "mr_egger_regression", "mr_weighted_median"))
+print(res_single)
 
 # Calculate R and Rsq for outcome
 DCM_out_data$r.outcome <- get_r_from_bsen(
@@ -777,35 +742,3 @@ mr_report(
   author = "RUBA ABDO",
   study = "Cardiac Troponin I ON DCM MR study"
 )
-# Read the PheWAS data from a CSV file
-phewas_data <- fread("C:/Users/hp/Desktop/phewas_data.csv")
-
-# Adding the -log10(P-value) column
-phewas_data <- phewas_data %>% mutate(logp = -log10(`P-value`))
-
-# Arrange the data by increasing logp and convert Phenotype to a factor with levels ordered accordingly
-phewas_data <- phewas_data %>%
-  arrange(logp) %>%
-  mutate(Phenotype = factor(Phenotype, levels = unique(Phenotype)))
-
-# Create a horizontal Manhattan-style bar plot:
-# - x axis: Phenotype names (after coordinate flip, will be vertical axis)
-# - y axis: -log10(p-value)
-# - Bars colored by SNP for easy distinction
-# Add a red dashed horizontal line to mark the significance threshold (p = 2.8e-5)
-p <- ggplot(phewas_data, aes(x = Phenotype, y = logp, fill = SNP)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
-  coord_flip() +
-  geom_hline(yintercept = -log10(2.8e-5), color = "red", linetype = "dashed") +
-  labs(title = "PheWAS Plot for 5 SNPs",
-       x = "Phenotype",
-       y = "-log10(P-value)",
-       fill = "SNP") +
-  theme_minimal() +
-  theme(axis.text.y = element_text(size = 8))
-
-# Display the plot in the R graphics window
-print(p)
-
-# Save the plot as a PNG file with specified dimensions
-ggsave("phewas_plot_5snps_combined.png", plot = p, width = 10, height = 8)
