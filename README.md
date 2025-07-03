@@ -3,9 +3,9 @@ This repository contains R scripts and data files for the master's thesis: Cardi
 # Data 
 Exposure data: Cardiac troponin I (cTnI) GWAS.
 Outcome data: Coronary artery disease (CAD) and Dilated cardiomyopathy (DCM).
-# Sources:
+# Sources
 The CAD summary data were obtained from the CARDIoGRAMplusC4D consortium (Nikpay et al., 2015).The cTnI and DCM datasets were provided directly by the corresponding authors upon request.
-# Notes:
+# Notes
 Please ensure that the exposure and outcome GWAS datasets do not contain overlapping samples.
 Use a consistent genome build (hg19/GRCh37 or liftOver to GRCh38) for all datasets.
 # How to Reuse This Script
